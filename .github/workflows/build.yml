@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Prepara configurazione
+            - name: Prepara configurazione
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
@@ -27,25 +27,26 @@ jobs:
         run: |
           mkdir -p $HOME/telegram-configuration
           cp -R build-system/example-configuration/* $HOME/telegram-configuration/
-
-          # Inserisce le credenziali nel file variables.bzl
-          # (il nome esatto delle chiavi va verificato nel file effettivo del repo,
-          # può differire leggermente tra versioni)
           sed -i '' "s/API_ID = .*/API_ID = \"${TG_API_ID}\"/" $HOME/telegram-configuration/variables.bzl
           sed -i '' "s/API_HASH = .*/API_HASH = \"${TG_API_HASH}\"/" $HOME/telegram-configuration/variables.bzl
           sed -i '' "s/BUNDLE_ID = .*/BUNDLE_ID = \"${TG_BUNDLE_ID}\"/" $HOME/telegram-configuration/variables.bzl
 
-      - name: Build (senza firma - solo per verificare che compili)
+      - name: Importa certificati fake per unsigned build
+        run: |
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+
+      - name: Build (senza firma reale - solo per verificare che compili)
         run: |
           mkdir -p "$HOME/telegram-bazel-cache"
           python3 build-system/Make/Make.py \
             --cacheDir="$HOME/telegram-bazel-cache" \
             build \
             --configurationPath="$HOME/telegram-configuration" \
+            --codesigningInformationPath=build-system/fake-codesigning \
             --buildNumber=100001 \
-            --configuration=release_universal \
+            --configuration=release_arm64 \
             --disableExtensions
-
+            
       - name: Carica IPA come artifact
         uses: actions/upload-artifact@v4
         with:
