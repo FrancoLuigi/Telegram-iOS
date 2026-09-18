@@ -44,8 +44,7 @@ jobs:
             --configurationPath="$HOME/telegram-configuration" \
             --codesigningInformationPath=build-system/fake-codesigning \
             --buildNumber=100001 \
-            --configuration=release_arm64 \
-            --disableExtensions
+            --configuration=release_arm64
 
       - name: Carica IPA come artifact
         uses: actions/upload-artifact@v4
