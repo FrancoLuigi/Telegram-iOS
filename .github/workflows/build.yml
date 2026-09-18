@@ -5,8 +5,8 @@ on:
 
 jobs:
   build:
-    runs-on: macos-26  
-    timeout-minutes: 300  # build Bazel può richiedere ore
+    runs-on: macos-26
+    timeout-minutes: 300
 
     steps:
       - name: Checkout con submoduli
@@ -14,16 +14,22 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Elenca versioni Xcode disponibili
-        run: ls /Applications | grep -i xcode
+      - name: Seleziona Xcode 26.2 e accetta licenza
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app
+          sudo xcodebuild -license accept
 
-      - name: Seleziona Xcode 26.2
-        run: sudo xcode-select -s /Applications/Xcode_26.2.app
-        
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Ispeziona configurazione di esempio
+        run: |
+          echo "--- Contenuto della cartella example-configuration ---"
+          ls -la build-system/example-configuration/
+          echo "--- File .json trovati ---"
+          find build-system/example-configuration/ -name "*.json"
 
       - name: Prepara configurazione
         env:
@@ -33,9 +39,29 @@ jobs:
         run: |
           mkdir -p $HOME/telegram-configuration
           cp -R build-system/example-configuration/* $HOME/telegram-configuration/
-          sed -i '' "s/API_ID = .*/API_ID = \"${TG_API_ID}\"/" $HOME/telegram-configuration/variables.bzl
-          sed -i '' "s/API_HASH = .*/API_HASH = \"${TG_API_HASH}\"/" $HOME/telegram-configuration/variables.bzl
-          sed -i '' "s/BUNDLE_ID = .*/BUNDLE_ID = \"${TG_BUNDLE_ID}\"/" $HOME/telegram-configuration/variables.bzl
+
+          # Trova il file JSON di configurazione dentro la cartella copiata
+          CONFIG_FILE=$(find $HOME/telegram-configuration -maxdepth 1 -name "*.json" | head -n 1)
+          echo "File di configurazione trovato: $CONFIG_FILE"
+
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "ERRORE: nessun file .json trovato in $HOME/telegram-configuration"
+            exit 1
+          fi
+
+          # Mostra il contenuto per verificare i nomi dei campi reali
+          echo "--- Contenuto del file JSON ---"
+          cat "$CONFIG_FILE"
+
+          # Salva il path per gli step successivi
+          echo "CONFIG_FILE=$CONFIG_FILE" >> $GITHUB_ENV
+
+          # Se esiste anche variables.bzl, aggiorna api_id/api_hash/bundle id lì
+          if [ -f "$HOME/telegram-configuration/variables.bzl" ]; then
+            sed -i '' "s/API_ID = .*/API_ID = \"${TG_API_ID}\"/" "$HOME/telegram-configuration/variables.bzl"
+            sed -i '' "s/API_HASH = .*/API_HASH = \"${TG_API_HASH}\"/" "$HOME/telegram-configuration/variables.bzl"
+            sed -i '' "s/BUNDLE_ID = .*/BUNDLE_ID = \"${TG_BUNDLE_ID}\"/" "$HOME/telegram-configuration/variables.bzl"
+          fi
 
       - name: Importa certificati fake per unsigned build
         run: |
@@ -47,7 +73,7 @@ jobs:
           python3 build-system/Make/Make.py \
             --cacheDir="$HOME/telegram-bazel-cache" \
             build \
-            --configurationPath="$HOME/telegram-configuration" \
+            --configurationPath="${CONFIG_FILE}" \
             --codesigningInformationPath=build-system/fake-codesigning \
             --buildNumber=100001 \
             --configuration=release_arm64
