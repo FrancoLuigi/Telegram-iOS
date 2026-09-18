@@ -50,31 +50,19 @@ jobs:
           TG_BUNDLE_ID: ${{ secrets.TG_BUNDLE_ID }}
         run: |
           mkdir -p $HOME/telegram-configuration
-          cp -R build-system/example-configuration/* $HOME/telegram-configuration/
 
-          # Trova il file JSON di configurazione dentro la cartella copiata
-          CONFIG_FILE=$(find $HOME/telegram-configuration -maxdepth 1 -name "*.json" | head -n 1)
-          echo "File di configurazione trovato: $CONFIG_FILE"
+          jq \
+            --arg bundle_id "$TG_BUNDLE_ID" \
+            --arg api_id "$TG_API_ID" \
+            --arg api_hash "$TG_API_HASH" \
+            '.bundle_id = $bundle_id | .api_id = $api_id | .api_hash = $api_hash' \
+            build-system/appstore-configuration.json \
+            > $HOME/telegram-configuration/configuration.json
 
-          if [ -z "$CONFIG_FILE" ]; then
-            echo "ERRORE: nessun file .json trovato in $HOME/telegram-configuration"
-            exit 1
-          fi
+          echo "--- Configurazione generata ---"
+          cat $HOME/telegram-configuration/configuration.json
 
-          # Mostra il contenuto per verificare i nomi dei campi reali
-          echo "--- Contenuto del file JSON ---"
-          cat "$CONFIG_FILE"
-
-          # Salva il path per gli step successivi
-          echo "CONFIG_FILE=$CONFIG_FILE" >> $GITHUB_ENV
-
-          # Se esiste anche variables.bzl, aggiorna api_id/api_hash/bundle id lì
-          if [ -f "$HOME/telegram-configuration/variables.bzl" ]; then
-            sed -i '' "s/API_ID = .*/API_ID = \"${TG_API_ID}\"/" "$HOME/telegram-configuration/variables.bzl"
-            sed -i '' "s/API_HASH = .*/API_HASH = \"${TG_API_HASH}\"/" "$HOME/telegram-configuration/variables.bzl"
-            sed -i '' "s/BUNDLE_ID = .*/BUNDLE_ID = \"${TG_BUNDLE_ID}\"/" "$HOME/telegram-configuration/variables.bzl"
-          fi
-
+          echo "CONFIG_FILE=$HOME/telegram-configuration/configuration.json" >> $GITHUB_ENV
       - name: Importa certificati fake per unsigned build
         run: |
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
