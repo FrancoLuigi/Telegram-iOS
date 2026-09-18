@@ -31,6 +31,18 @@ jobs:
           echo "--- File .json trovati ---"
           find build-system/example-configuration/ -name "*.json"
 
+      - name: Cerca file di configurazione JSON nel repo
+        run: |
+          echo "--- Tutti i .json in build-system ---"
+          find build-system -maxdepth 2 -name "*.json"
+          echo ""
+          echo "--- Contenuto di ciascuno ---"
+          for f in $(find build-system -maxdepth 2 -name "*.json"); do
+            echo "=== $f ==="
+            cat "$f"
+            echo ""
+          done
+
       - name: Prepara configurazione
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
