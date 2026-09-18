@@ -47,21 +47,16 @@ jobs:
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
-          TG_BUNDLE_ID: ${{ secrets.TG_BUNDLE_ID }}
         run: |
           mkdir -p $HOME/telegram-configuration
-
           jq \
-            --arg bundle_id "$TG_BUNDLE_ID" \
             --arg api_id "$TG_API_ID" \
             --arg api_hash "$TG_API_HASH" \
-            '.bundle_id = $bundle_id | .api_id = $api_id | .api_hash = $api_hash' \
+            '.api_id = $api_id | .api_hash = $api_hash' \
             build-system/appstore-configuration.json \
             > $HOME/telegram-configuration/configuration.json
-
           echo "--- Configurazione generata ---"
           cat $HOME/telegram-configuration/configuration.json
-
           echo "CONFIG_FILE=$HOME/telegram-configuration/configuration.json" >> $GITHUB_ENV
       - name: Importa certificati fake per unsigned build
         run: |
