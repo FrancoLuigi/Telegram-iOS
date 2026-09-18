@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-            - name: Prepara configurazione
+      - name: Prepara configurazione
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
@@ -46,7 +46,7 @@ jobs:
             --buildNumber=100001 \
             --configuration=release_arm64 \
             --disableExtensions
-            
+
       - name: Carica IPA come artifact
         uses: actions/upload-artifact@v4
         with:
